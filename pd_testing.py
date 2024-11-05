@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from sample import er_dag, sf_in, sf_out, randomize_graph, corr, cov, simulate, standardize
+from dao import er_dag, sf_in, sf_out, randomize_graph, corr, cov, simulate, standardize
 
 import jpype
 import jpype.imports
 
-jpype.startJVM("-Xmx4g", classpath="tetrad-current.jar")
+jpype.startJVM("-Xmx4g", classpath="../tetrad-current.jar")
 
 import java.util as util
 import edu.cmu.tetrad.graph as tg
