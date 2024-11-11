@@ -1,9 +1,9 @@
 import os
 
 variables = [10, 50, 250]
-avg_deg = [1, 2, 6]
+avg_deg = [2, 4, 12]
 sample = [40, 80, 160, 320, 640, 1280, 2560, 5120, 10240]
-st_type = ['ER', 'SF_out', 'SF_in']
+st_type = ['ER', 'SF']
 
 
 os.makedirs('Data', exist_ok=True)

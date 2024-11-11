@@ -42,7 +42,5 @@ def mat_to_graph(g, nodes, cpdag=True):
     for i, a in enumerate(nodes):
         for j, b in enumerate(nodes):
             if g[i, j]: graph.addDirectedEdge(b, a)
-
-    if cpdag: graph = tg.GraphTransforms.cpdagForDag(graph)
-
-    return graph
+    if cpdag: graph = tg.GraphTransforms.dagToCpdag(graph)
+    return graph.toString()
