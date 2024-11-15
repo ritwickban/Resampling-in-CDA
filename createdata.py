@@ -34,65 +34,54 @@ def df_to_data(df):
     return td.BoxDataSet(databox, variables)
 
 
-variables = [10, 50, 250]
-avg_deg = [2, 4, 12]
-sample_sizes = [40, 80, 160, 320, 640, 1280, 2560, 5120]
+variables = [20, 100]
+avg_deg = [2, 6]
+sample_sizes = [40, 80, 160, 320, 640, 1280, 2560, 5120, 10240]
 st_type = ['ER', 'SF']
 
-# Assuming `simulate`, `corr`, `mat_to_graph`, `df_to_data`, and `standardize` functions are defined elsewhere.
 for st in st_type:
     for p in variables:
         for ad in avg_deg:
             if p > ad:
-                if st == 'ER':
-                    # Generate ER graph
-                    g = er_dag(p, ad=ad)
-                elif st == 'SF':
-                    # Generate SF graph with both in and out scaling
-                    g = er_dag(p, ad=ad)
-                    g = sf_in(g)
-                    g = sf_out(g)
+                for i in range(50):
+                    if st == 'ER':
+                        # Generate ER graph
+                        g = er_dag(p, ad=ad)
+                    elif st == 'SF':
+                        # Generate SF graph with both in and out scaling
+                        g = er_dag(p, ad=ad)
+                        g = sf_in(g)
+                        g = sf_out(g)
 
-                # Calculate correlation matrix and simulate base matrix with 10240 rows
-                _, B, O = corr(g)
-                X1=simulate(B,O,5)
-                df=pd.DataFrame(X1,columns=[f"X{i+1}" for i in range(p)])
-        
-                data= df_to_data(df)
-                nodes= data.getVariables()
+                    # Calculate correlation matrix and simulate base matrix with 10240 rows
+                    _, B, O = corr(g)
+                    X1 = simulate(B, O, 5)
+                    df = pd.DataFrame(X1, columns=[f"X{i+1}" for i in range(p)])
 
-                # Save the base graph and data
-                base_dir = f"Data/{st}/Variable_{p}/AD_{ad}/"
+                    data = df_to_data(df)
+                    nodes = data.getVariables()
+
+                    # Define the base directory path and create it
+                    base_dir = f"Data/{st}/Variable_{p}/AD_{ad}"
+                    os.makedirs(base_dir, exist_ok=True)
+
+                    # Convert to graph format with column names and save
+                    graph = mat_to_graph(g, nodes)
+                    with open(f"{base_dir}/graph{i+1}.txt", 'w') as file:
+                        file.write(str(graph))
+
+                    # Export the base data matrix with 10240 rows
+                    for sample in sample_sizes:
+                        X_base = simulate(B, O, sample)
+                        df_base = pd.DataFrame(X_base, columns=[f"X{i+1}" for i in range(p)])
+                        export_base_dir = f"{base_dir}/n_{sample}"
+                        os.makedirs(export_base_dir, exist_ok=True)
+                        df_base.to_csv(f"{export_base_dir}/Sample_{i+1}.csv", index=False)
+                        print(f"Base matrix done for iteration {i+1}\n")
+
+
+                print(f"Finished for {st} with Variables={p}, AD={ad}\n")
                 
-                
-                graph = mat_to_graph(g, nodes)  # Convert to graph format with column names
-                with open(f"{base_dir}/graph.txt", 'w') as file:
-                    file.write(str(graph))
-
-                # Sampling loop
-                for i in range(200):
-                    X_base = simulate(B, O, 10240)  # Base matrix with 10240 rows
-                    df_base = pd.DataFrame(X_base, columns=[f"X{i+1}" for i in range(p)])
-                    export_base=f"Data/{st}/Variable_{p}/AD_{ad}/n_10240/"
-                    df_base.to_csv(f"{export_base}_Sample{i+1}.csv",index=False)
-                    print(f"Base done for iteration{i}\n")
-
-                    for size in sample_sizes:
-                        # Sample rows (not columns) without replacement
-                        sampled_df = df_base.sample(n=size, replace=False)
-                        
-                        # Standardize the sampled data
-                        sampled_df = standardize(sampled_df.to_numpy())
-                        sampled_df = pd.DataFrame(sampled_df, columns=[f"X{i+1}" for i in range(p)])
-
-                        # Save standardized sampled data
-                        sample_dir = f"{base_dir}/n_{size}/"
-                        sampled_df.to_csv(f"{sample_dir}_sample{i+1}.csv", index=False)
-                    print(f"Sampling done for {size}\n")
-                print(f"Finished for {st} Var={p} /AD={ad}")
-            else:
-                print("YOU'RE DUMB! YOU CAN'T CODE! ")
-            
 
 
 
