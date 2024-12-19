@@ -4,9 +4,10 @@ import pandas as pd
 import jpype
 import numpy as np
 import jpype.imports
+import time
 
 try :
-	jpype.startJVM("-Xmx16g",classpath="../tetrad-current.jar")
+	jpype.startJVM("-Xmx16g",classpath="tetrad-current.jar")
 	print("JVM Started")
 except OSError:
 	print("JVM already running")
@@ -15,6 +16,7 @@ import java.util as util
 import edu.cmu.tetrad.data as td
 import edu.cmu.tetrad.graph as tg
 import edu.cmu.tetrad.search as ts
+import edu.cmu.tetrad.stat.correlation as tsc
 
 def df_to_data(df):
     cols = df.columns
@@ -77,17 +79,51 @@ def sample_90(filepath):
             print(f"Error processing {filepath} for type '90': {e}")
             return None
 
-file_path='Data/ER/Variable_20/AD_2/n_40/Sample_1.csv'
-
-for i in range(1,5):
-    result_90=sample_90(file_path)
-    df_90,_,type=result_90
-    data = df_to_data(df_90)
-    score = ts.score.SemBicScore(data, True)
+def Compute(df, ESS=None): 
+    data = df_to_data(df) 
     #score.setStructurePrior(0)
-    graph, bics, times = multi_boss(score, discount=2,threads=1,starts=1)
-    print(graph)
-    print(times)
+    rcm = tsc.RealCovarianceMatrix(data.getDoubleData().toArray())
+    cov = td.CovarianceMatrix(data.getVariables(), rcm.compute(True), data.getNumRows())
+    if ESS is not None:
+        cov.setSampleSize(int(ESS))
+    score = ts.score.SemBicScore(cov)
+    graph, bics, times = multi_boss(score, discount=2, threads=1, starts=1)
+    return graph
+
+file_path='Data/SF/Variable_100/AD_6/n_10240/Sample_1.csv'
+start=time.time()
+if file_path.endswith(".csv"):
+# root=file_path.split(os.sep)[0]
+#print(root)
+    base=os.path.dirname(file_path)
+    print(base)
+    # outputdir=os.path.join(base,"processed_output")
+    # os.makedirs(outputdir,exist_ok=True)
+    # types=['90','50','100SS','100ESS','Split']
+    # for type in types:
+    #     typedir=os.path.join(outputdir,type)
+    #     #print(typedir)
+    #     os.makedirs(typedir,exist_ok=True)
+    #     if type=='90':
+    #         for i in range(1,5):
+    #             result_90=sample_90(file_path)
+    #             df_90,_,type=result_90
+    #             graph=Compute(df_90)
+    #             with open(f"{typedir}/{os.path.basename(file_path).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+    #                             fout.write(str(graph.toString()))
+            
+             
+#print(outputdir)
+
+
+
+end_time = time.time()
+elapsed_time = end_time - start
+
+# if file_path.endswith(".csv"):
+#       print("Success")
+
+#print(f"Elapsed time: {elapsed_time:.6f} seconds")
 #with open(f"{output_dir}/{filename.replace('.csv','')}{type}_subsample.txt", "w") as fout:
     #fout.write(str(graph.toString()))
     #fout.write(str(times))

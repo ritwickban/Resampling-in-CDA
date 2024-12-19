@@ -4,7 +4,7 @@ import jpype.imports
 import os
 
 try:
-    jpype.startJVM("-Xmx16g", classpath="../tetrad-current.jar")
+    jpype.startJVM("-Xmx16g", classpath="tetrad-current.jar")
     print("JVM Started")
 except OSError:
     print("JVM already started")
@@ -66,7 +66,7 @@ for st in st_type:
                     os.makedirs(base_dir, exist_ok=True)
 
                     # Convert to graph format with column names and save
-                    graph = mat_to_graph(g, nodes)
+                    graph = mat_to_graph(g, nodes, False)
                     with open(f"{base_dir}/graph{i+1}.txt", 'w') as file:
                         file.write(str(graph))
 

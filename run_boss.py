@@ -6,12 +6,13 @@ import numpy as np
 import jpype.imports
 
 try :
-	jpype.startJVM("-Xmx16g",classpath="../tetrad-current.jar")
+	jpype.startJVM("-Xmx16g",classpath="tetrad-current.jar")
 	print("JVM Started")
 except OSError:
 	print("JVM already running")
 
 import java.util as util
+import edu.cmu.tetrad.stat.correlation as tsc
 import edu.cmu.tetrad.data as td
 import edu.cmu.tetrad.graph as tg
 import edu.cmu.tetrad.search as ts
@@ -124,85 +125,158 @@ def multi_boss(score, discounts=[2], starts=1, threads=1):
 
     return graph, bics, times
 
+# Transforms dataframe to Tetrad dataframe, computes covariance matrix and then scomputes SEMBIC score and runs boss.
+def Compute(df, ESS=None): 
+    data = df_to_data(df) 
+    #score.setStructurePrior(0)
+    rcm = tsc.RealCovarianceMatrix(data.getDoubleData().toArray())
+    cov = td.CovarianceMatrix(data.getVariables(), rcm.compute(True), data.getNumRows())
+    if ESS is not None:
+        cov.setSampleSize(int(ESS))
+    score = ts.score.SemBicScore(cov)
+    graph, bics, times = multi_boss(score, discounts=2, threads=1, starts=1)
+    return graph
+
 def main(folderpath):
+    if folderpath.endswith(".csv"):
+        base=os.path.dirname(folderpath)
+        outputdir=os.path.join(base,"processed_output")
+        os.makedirs(outputdir,exist_ok=True)
+        types=['90','50','100SS','100ESS','Split']
+        for type in types:
+            typedir=os.path.join(outputdir,type)
+            os.makedirs(typedir,exist_ok=True)
+            if type=='90':
+                        # Generating 100 samples, running boss, storing graphs
+                for i in range(1,101):
+                    result_90=sample_90(folderpath)
+                    df_90,_,type=result_90
+                    graph=Compute(df_90)
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                        fout.write(str(graph.toString()))
+            elif type=='50':
+                # Generating 100 samples, running boss, storing graphs
+                for i in range(1,101):
+                    result_50=sample_50(folderpath)
+                    df_50,_,type=result_50
+                    graph=Compute(df_50)
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                        fout.write(str(graph.toString()))
+            elif type=='100SS':
+                # Generating 100 samples, running boss, storing graphs
+                for i in range(1,101):
+                    result_100=sample_100SS(folderpath)
+                    df_100,_,type=result_100
+                    graph=Compute(df_100)
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
+                        fout.write(str(graph.toString()))
+            elif type=='100ESS':
+                # Generating 100 samples, running boss, storing graphs
+                for i in range(1,101):
+                    result_100ESS=sample_100ESS(folderpath)
+                    df_100ESS,ESS,type=result_100ESS
+                    graph=Compute(df_100ESS, ESS)
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
+                            fout.write(str(graph.toString()))
+            else:
+                        # Generating 100 samples, running boss, storing graphs
+                for i in range (1,101):
+                    result_split=sample_split(folderpath)
+                    df_split1,df_split2,type=result_split
+                    graph1=Compute(df_split1)
+                    graph2=Compute(df_split2)
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
+                        fout1.write(str(graph1.toString()))
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
+                        fout2.write(str(graph2.toString()))
+            
+                
 
-    output_dir = os.path.join(folderpath, "processed_output")
-    os.makedirs(output_dir, exist_ok=True)
-    for filename in os.listdir(folderpath):
-        if filename.endswith(".csv"):
-            file_path = os.path.join(folderpath, filename)
-            types=['90','50','100SS','100ESS','Split']
-            for type in types:
-                if type=='90':
-                    # Generating 100 samples, running boss, storing graphs
-                    for i in range(1,101):
-                        result_90=sample_90(file_path)
-                        df_90,_,type=result_90
-                        data = df_to_data(df_90)
-                        score = ts.score.SemBicScore(data, True)
-                        #score.setStructurePrior(0)
-                        graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                        with open(f"{output_dir}/{filename.replace('.csv','')}{type}_subsample.txt", "w") as fout:
-                            fout.write(str(graph.toString()))
-                            fout.write(str(times))
-                elif type=='50':
-                    # Generating 100 samples, running boss, storing graphs
-                    for i in range(1,101):
-                        result_50=sample_50(file_path)
-                        df_50,_,type=result_50
-                        data = df_to_data(df_50)
-                        score = ts.score.SemBicScore(data, True)
-                        #score.setStructurePrior(0)
-                        graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                        with open(f"{output_dir}/{filename.replace('.csv','')}{type}_subsample.txt", "w") as fout:
-                            fout.write(str(graph.toString()))
-                            fout.write(str(times)) 
-                elif type=='100SS':
-                    # Generating 100 samples, running boss, storing graphs
-                    for i in range(1,101):
-                        result_100=sample_100SS(file_path)
-                        df_100,_,type=result_100
-                        data = df_to_data(df_100)
-                        score = ts.score.SemBicScore(data, True)
-                        #score.setStructurePrior(0)
-                        graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                        with open(f"{output_dir}/{filename.replace('.csv','')}{type}_bootstrap(SS).txt", "w") as fout:
-                            fout.write(str(graph.toString()))
-                            fout.write(str(times))
-                elif type=='100ESS':
-                    # Generating 100 samples, running boss, storing graphs
-                    for i in range(1,101):
-                        result_100ESS=sample_100ESS(file_path)
-                        df_100ESS,ESS,type=result_100ESS
-                        data = df_to_data(df_100ESS)
-                        cov = td.CovarianceMatrix(data)
-                        cov.setSampleSize(int(ESS))
-                        score = ts.score.SemBicScore(cov, True)
-                        #score.setStructurePrior(0)
-                        graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                        with open(f"{output_dir}/{filename.replace('.csv','')}{type}_bootstrap(ESS).txt", "w") as fout:
+    else:
+        output_dir = os.path.join(folderpath, "processed_output")
+        os.makedirs(output_dir, exist_ok=True)
+        for filename in os.listdir(folderpath):
+            if filename.endswith(".csv"):
+                file_path = os.path.join(folderpath, filename)
+                types=['90','50','100SS','100ESS','Split']
+                for type in types:
+                    type_dir=os.path.join(output_dir,type)
+                    os.makedirs(type_dir,exist_ok=True)
+                    if type=='90':
+                        # Generating 100 samples, running boss, storing graphs
+                        for i in range(1,101):
+                            result_90=sample_90(file_path)
+                            df_90,_,type=result_90
+                            graph=Compute(df_90)
+                            # data = df_to_data(df_90)
+                            # score = ts.score.SemBicScore(data, False)
+                            # #score.setStructurePrior(0)
+                            # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
                                 fout.write(str(graph.toString()))
-                                fout.write(str(times))
-                else:
-                    # Generating 100 samples, running boss, storing graphs
-                    for i in range (1,101):
-                        result_split=sample_split(file_path)
-                        df_split1,df_split2,type=result_split
-
-                        data1 = df_to_data(df_split1)
-                        data2 = df_to_data(df_split2)
-                        score1 = ts.score.SemBicScore(data1, True)
-                        score2 = ts.score.SemBicScore(data2, True)
-                        #score1.setStructurePrior(0)
-                        #score2.setStructurePrior(0)
-                        graph1, bics1, times1 = multi_boss(score1, discounts=2,threads=1,starts=1)
-                        graph2, bics2, times2 = multi_boss(score2, discounts=2,threads=1,starts=1)
-                        with open(f"{output_dir}/{filename.replace('.csv','')}{type}_split(1).txt", "w") as fout1:
-                            fout1.write(str(graph1.toString()))
-                            fout1.write(str(times1))
-                        with open(f"{output_dir}/{filename.replace('.csv','')}{type}_split(2).txt", "w") as fout2:
-                            fout2.write(str(graph2.toString()))
-                            fout2.write(str(times2))
+                                #fout.write(str(times))
+                    elif type=='50':
+                        # Generating 100 samples, running boss, storing graphs
+                        for i in range(1,101):
+                            result_50=sample_50(file_path)
+                            df_50,_,type=result_50
+                            graph=Compute(df_50)
+                            # data = df_to_data(df_50)
+                            # score = ts.score.SemBicScore(data, False)
+                            # #score.setStructurePrior(0)
+                            # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                                fout.write(str(graph.toString()))
+                                #fout.write(str(times)) 
+                    elif type=='100SS':
+                        # Generating 100 samples, running boss, storing graphs
+                        for i in range(1,101):
+                            result_100=sample_100SS(file_path)
+                            df_100,_,type=result_100
+                            graph=Compute(df_100)
+                            # data = df_to_data(df_100)
+                            # score = ts.score.SemBicScore(data, False)
+                            # #score.setStructurePrior(0)
+                            # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
+                                fout.write(str(graph.toString()))
+                                #fout.write(str(times))
+                    elif type=='100ESS':
+                        # Generating 100 samples, running boss, storing graphs
+                        for i in range(1,101):
+                            result_100ESS=sample_100ESS(file_path)
+                            df_100ESS,ESS,type=result_100ESS
+                            graph=Compute(df_100ESS, ESS)
+                            # data = df_to_data(df_100ESS)
+                            # cov = td.CovarianceMatrixOnTheFly(data)
+                            # cov.setSampleSize(int(ESS))
+                            # score = ts.score.SemBicScore(cov)
+                            # #score.setStructurePrior(0)
+                            # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
+                                    fout.write(str(graph.toString()))
+                                    #fout.write(str(times))
+                    else:
+                        # Generating 100 samples, running boss, storing graphs
+                        for i in range (1,101):
+                            result_split=sample_split(file_path)
+                            df_split1,df_split2,type=result_split
+                            graph1=Compute(df_split1)
+                            graph2=Compute(df_split2)
+                            # data1 = df_to_data(df_split1)
+                            # data2 = df_to_data(df_split2)
+                            # score1 = ts.score.SemBicScore(data1, False)
+                            # score2 = ts.score.SemBicScore(data2, False)
+                            #score1.setStructurePrior(0)
+                            #score2.setStructurePrior(0)
+                            # graph1, bics1, times1 = multi_boss(score1, discounts=2,threads=1,starts=1)
+                            # graph2, bics2, times2 = multi_boss(score2, discounts=2,threads=1,starts=1)
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
+                                fout1.write(str(graph1.toString()))
+                                #fout1.write(str(times1))
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
+                                fout2.write(str(graph2.toString()))
+                                #fout2.write(str(times2))
                 
 #print(f"Processing file: {file_path}\n")
 # #result=sample(file_path)
