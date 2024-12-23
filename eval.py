@@ -7,26 +7,29 @@ import pickle
 def process_directory(path, pd, reps,temp,resample):
     files = os.listdir(path)
     probs={}
-    if len(files)==5000:
-        for file in files:
-            if file.startswith(f"Sample_{pd}{resample}") and file.endswith(".txt"):
-                file_path = os.path.join(path, file)
-                #print(f"Processing file: {file}")
-                process_graph(file_path, reps,probs)
-                
-                # break
-                # Save the results
-                # output_file = os.path.join(root, f"Analysed")
-                # os.makedirs(output_file,exist_ok=True)
-                # with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
-                #     pickle.dump(probs, f)
-                # print(f"Saved probabilities to {output_file}")
-        #print(probs)
-        output_file = os.path.join(temp,f"Analysed")
-        os.makedirs(output_file,exist_ok=True)
-        with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
-            pickle.dump(probs, f)
-        #print(f"Saved probabilities to {output_file}")
+    # print(files)
+    # quit()
+    for file in files:
+        if file.startswith(f"Sample_{pd}_{resample}") and file.endswith(".txt"):
+            file_path = os.path.join(path, file)
+            print(f"Processing file: {file}")
+            process_graph(file_path, reps,probs)
+            
+            # break
+            # Save the results
+            # output_file = os.path.join(root, f"Analysed")
+            # os.makedirs(output_file,exist_ok=True)
+            # with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
+            #     pickle.dump(probs, f)
+            # print(f"Saved probabilities to {output_file}")
+            #print(probs)
+            #quit()
+
+    output_file = os.path.join(temp,f"Analysed")
+    os.makedirs(output_file,exist_ok=True)
+    with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
+        pickle.dump(probs, f)
+    # #print(f"Saved probabilities to {output_file}")
 
 def process_graph(file_path, reps, probs):
     with open(file_path, 'r') as f:
