@@ -25,9 +25,9 @@ def process_directory(path, pd, reps,temp,resample):
             #print(probs)
             #quit()
 
-    output_file = os.path.join(temp,f"Analysed")
+    output_file = os.path.join(temp,f"Analysed FGES")
     os.makedirs(output_file,exist_ok=True)
-    with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
+    with open(f'{output_file}/FGES_analyzed_{pd}.p', "wb") as f:
         pickle.dump(probs, f)
     # #print(f"Saved probabilities to {output_file}")
 
@@ -35,7 +35,7 @@ def process_graph(file_path, reps, probs):
     with open(file_path, 'r') as f:
         edges = [
             edge.split()[1:]
-            for edge in f.read().split("Graph Edges:\n")[1].split("\n")
+            for edge in f.read().split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
             if edge.strip()
         ]
     
@@ -96,7 +96,7 @@ for st in st_type:
                 for resample in resamples:
                     if (p==100) and (int(sample)<320): continue
                     base_path = f"Data/{st}/Variable_{p}/AD_{ad}/n_{sample}/processed_output/{resample}/"  # Base directory containing all subdirectories.
-                    temp=base_path.replace('Data','Analysed')
+                    temp=base_path.replace('Data','Analysed_FGES')
                     for pd in range(1,51):
                         process_directory(base_path, pd, reps,temp,resample)
 

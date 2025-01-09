@@ -68,6 +68,39 @@ def multi_boss(score, discount=[2], starts=1, threads=1):
 
     return graph, bics, times
 
+def fges(score, discount=[2], starts=1, threads=1):
+    
+    score.setStructurePrior(0)
+    order = None
+    bics = []
+    times = []
+
+    
+    score.setPenaltyDiscount(discount)
+        
+    fges = ts.Fges(score)
+    # fges.setUseBes(False)
+    fges.setFaithfulnessAssumed(False)
+    # fges.setResetAfterBM(True)
+    # fges.setResetAfterRS(False)
+
+    # fges.setUseDataOrder(order != None)
+    # fges.setNumStarts(starts)
+    # if starts > 1: starts = 1
+
+    fges.setNumThreads(threads)
+    fges.setVerbose(False)
+
+    # search = ts.PermutationSearch(fges)
+    # if order != None: search.setOrder(order)
+
+    graph = fges.search()
+    # order = search.getOrder()
+    # bics += [bic for bic in boss.getBics()]
+    # times += [time for time in boss.getTimes()]
+
+    return graph
+
 def sample_90(filepath):
     """Sample 90% of the data."""
     try:
@@ -87,28 +120,29 @@ def Compute(df, ESS=None):
     if ESS is not None:
         cov.setSampleSize(int(ESS))
     score = ts.score.SemBicScore(cov)
-    graph, bics, times = multi_boss(score, discount=2, threads=1, starts=1)
+    graph = fges(score, discount=2, threads=1, starts=1)
     return graph
 
-file_path='Data/SF/Variable_100/AD_6/n_10240/Sample_1.csv'
+file_path='Data/SF/Variable_20/AD_2/n_40/Sample_1.csv'
 start=time.time()
 if file_path.endswith(".csv"):
 # root=file_path.split(os.sep)[0]
 #print(root)
     base=os.path.dirname(file_path)
-    print(base)
+    # print(base)
     # outputdir=os.path.join(base,"processed_output")
     # os.makedirs(outputdir,exist_ok=True)
-    # types=['90','50','100SS','100ESS','Split']
-    # for type in types:
-    #     typedir=os.path.join(outputdir,type)
-    #     #print(typedir)
-    #     os.makedirs(typedir,exist_ok=True)
-    #     if type=='90':
-    #         for i in range(1,5):
-    #             result_90=sample_90(file_path)
-    #             df_90,_,type=result_90
-    #             graph=Compute(df_90)
+    types=['90','50','100SS','100ESS','Split']
+    for type in types:
+        #typedir=os.path.join(outputdir,type)
+        #print(typedir)
+        #os.makedirs(typedir,exist_ok=True)
+        if type=='90':
+            for i in range(1):
+                result_90=sample_90(file_path)
+                df_90,_,type=result_90
+                graph=Compute(df_90)
+                print(graph.toString())
     #             with open(f"{typedir}/{os.path.basename(file_path).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
     #                             fout.write(str(graph.toString()))
             
