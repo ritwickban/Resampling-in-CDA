@@ -4,16 +4,26 @@ import pickle
 
 # Command-line arguments: pd is the pattern for filenames, reps is the repetitions count.
 #pd, reps = [int(x) for x in sys.argv[1:3]]
-def process_directory(path, pd, reps,temp,resample):
+def process_directory(path, reps,temp,resample):
     files = os.listdir(path)
-    probs={}
-    # print(files)
-    # quit()
+    #print(files)
     for file in files:
-        if file.startswith(f"Sample_{pd}_{resample}") and file.endswith(".txt"):
+        print(file)
+        if file.endswith(".pkl"):
             file_path = os.path.join(path, file)
             print(f"Processing file: {file}")
-            process_graph(file_path, reps,probs)
+            probs=analyse_graphs(file_path, reps)
+        print(probs)
+        quit()
+    
+    # print(files)
+    # quit()
+    # for file in files:
+    #     print(file, f"Sample_{pd}_{resample}")
+    #     if file.startswith(f"Sample_{pd}_{resample}") and file.endswith(".pkl"):
+    #         file_path = os.path.join(path, file)
+    #         print(f"Processing file: {file}")
+            #analyse_graphs(file_path, reps,probs)
             
             # break
             # Save the results
@@ -22,71 +32,122 @@ def process_directory(path, pd, reps,temp,resample):
             # with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
             #     pickle.dump(probs, f)
             # print(f"Saved probabilities to {output_file}")
-            #print(probs)
-            #quit()
+        #
 
-    output_file = os.path.join(temp,f"Analysed FGES")
-    os.makedirs(output_file,exist_ok=True)
-    with open(f'{output_file}/FGES_analyzed_{pd}.p', "wb") as f:
-        pickle.dump(probs, f)
+
+        # output_file = os.path.join(temp,f"Analysed FGES")
+        # os.makedirs(output_file,exist_ok=True)
+        # with open(f'{output_file}/FGES_analyzed_.pkl', "wb") as f:
+        #     pickle.dump(probs, f)
     # #print(f"Saved probabilities to {output_file}")
 
-def process_graph(file_path, reps, probs):
-    with open(file_path, 'r') as f:
+def analyse_graphs(filepath,reps):
+    probs = {}
+    with open(filepath, 'rb') as f:
+        graphs = pickle.load(f)
+    for graph in graphs:
         edges = [
             edge.split()[1:]
-            for edge in f.read().split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+            for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
             if edge.strip()
         ]
-    
-    # Dictionaries to hold relationships and probabilities
-    parents, children, neighbors, nodes = {}, {}, {}, []
+        # Dictionaries to hold relationships and probabilities
+        parents, children, neighbors, nodes = {}, {}, {}, []
+        for edge in edges:
+            node1, relation, node2 = edge[0], edge[1], edge[2]
+            for node in [node1, node2]:
+                if node not in parents: parents[node] = []
+                if node not in children: children[node] = []
+                if node not in neighbors: neighbors[node] = []
+                if node not in nodes: nodes.append(node)
 
-    for edge in edges:
-        node1, relation, node2 = edge[0], edge[1], edge[2]
-        for node in [node1, node2]:
-            if node not in parents: parents[node] = []
-            if node not in children: children[node] = []
-            if node not in neighbors: neighbors[node] = []
-            if node not in nodes: nodes.append(node)
-
-        if relation == "-->":
-            parents[node2].append(node1)
-            children[node1].append(node2)
-        elif relation == "<--":
-            parents[node1].append(node2)
-            children[node2].append(node1)
-        elif relation == "---":
-            neighbors[node1].append(node2)
-            neighbors[node2].append(node1)
-
-    # Compute probabilities
-
-    nodes.sort()
-    for i in range(len(nodes)):
-        for j in range(i):
-            key = (nodes[i], nodes[j])
-            if key[0] not in parents and key[0] not in children and key[0] not in neighbors:
-                continue
-            if key[1] not in parents[key[0]] and key[1] not in children[key[0]] and key[1] not in neighbors[key[0]]:
-                continue
+            if relation == "-->":
+                parents[node2].append(node1)
+                children[node1].append(node2)
+            elif relation == "<--":
+                parents[node1].append(node2)
+                children[node2].append(node1)
+            elif relation == "---":
+                neighbors[node1].append(node2)
+                neighbors[node2].append(node1)
             
-            if key not in probs: probs[key] = {}
+        # Compute probabilities
+        nodes.sort()
+        for i in range(len(nodes)):
+            for j in range(i):
+                key = (nodes[i], nodes[j])
+                if key[0] not in parents and key[0] not in children and key[0] not in neighbors:
+                    continue
+                if key[1] not in parents[key[0]] and key[1] not in children[key[0]] and key[1] not in neighbors[key[0]]:
+                    continue
+                
+                if key not in probs: probs[key] = {} #"<--": 0, "-->": 0, "---": 0
 
-            if key[0] in parents[key[1]]: probs[key].setdefault("-->", 0)
-            if key[0] in children[key[1]]: probs[key].setdefault("<--", 0)
-            if key[0] in neighbors[key[1]]: probs[key].setdefault("---", 0)
+                if key[0] in parents[key[1]] and "-->" not in probs[key]: probs[key]["-->"] = 0
+                if key[0] in children[key[1]] and "<--" not in probs[key]: probs[key]["<--"] = 0
+                if key[0] in neighbors[key[1]] and "---" not in probs[key]: probs[key]["---"] = 0
 
-            if key[0] in parents[key[1]]: probs[key]["-->"] += 1.0 / reps
-            if key[0] in children[key[1]]: probs[key]["<--"] += 1.0 / reps
-            if key[0] in neighbors[key[1]]: probs[key]["---"] += 1.0 / reps
+                if key[0] in parents[key[1]]: probs[key]["-->"] += 1.0 / reps
+                if key[0] in children[key[1]]: probs[key]["<--"] += 1.0 / reps
+                if key[0] in neighbors[key[1]]: probs[key]["---"] += 1.0 / reps
+    return probs
+
+# def process_graph(file_path, reps, probs):
+#     with open(file_path, 'r') as f:
+#         edges = [
+#             edge.split()[1:]
+#             for edge in f.read().split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+#             if edge.strip()
+#         ]
+    
+#     # Dictionaries to hold relationships and probabilities
+#     parents, children, neighbors, nodes = {}, {}, {}, []
+
+#     for edge in edges:
+#         node1, relation, node2 = edge[0], edge[1], edge[2]
+#         for node in [node1, node2]:
+#             if node not in parents: parents[node] = []
+#             if node not in children: children[node] = []
+#             if node not in neighbors: neighbors[node] = []
+#             if node not in nodes: nodes.append(node)
+
+#         if relation == "-->":
+#             parents[node2].append(node1)
+#             children[node1].append(node2)
+#         elif relation == "<--":
+#             parents[node1].append(node2)
+#             children[node2].append(node1)
+#         elif relation == "---":
+#             neighbors[node1].append(node2)
+#             neighbors[node2].append(node1)
+
+#     # Compute probabilities
+
+#     nodes.sort()
+#     for i in range(len(nodes)):
+#         for j in range(i):
+#             key = (nodes[i], nodes[j])
+#             if key[0] not in parents and key[0] not in children and key[0] not in neighbors:
+#                 continue
+#             if key[1] not in parents[key[0]] and key[1] not in children[key[0]] and key[1] not in neighbors[key[0]]:
+#                 continue
+            
+#             if key not in probs: probs[key] = {"<--": 0, "-->": 0, "---": 0}
+
+#             # if ((key[1] in parents[key[0]]) & ("<--" not in probs[key])): probs[key].setdefault("<--", 0)
+#             # if key[1] in children[key[0]]: probs[key].setdefault("-->", 0)
+#             # if key[1] in neighbors[key[0]]: probs[key].setdefault("---", 0)
+
+#             if key[1] in parents[key[0]]: probs[key]["<--"] += 1.0 / reps
+#             if key[1] in children[key[0]]: probs[key]["-->"] += 1.0 / reps
+#             if key[1] in neighbors[key[0]]: probs[key]["---"] += 1.0 / reps
 reps=100
 variables = [20,100]
 avg_deg = [2,6]
 sample_sizes = [40, 80, 160, 320, 640, 1280, 2560, 5120, 10240]
 #sample_sizes = [40]
 st_type = ['ER', 'SF']
-resamples=['90','50','100SS','100ESS']
+resamples=['90','50','100SS','100ESS','Split']
 for st in st_type:
     for p in variables:
         for ad in avg_deg:
@@ -95,9 +156,18 @@ for st in st_type:
                 print('\n')
                 for resample in resamples:
                     if (p==100) and (int(sample)<320): continue
-                    base_path = f"Data/{st}/Variable_{p}/AD_{ad}/n_{sample}/processed_output/{resample}/"  # Base directory containing all subdirectories.
+                    base_path = f"Data/{st}/Variable_{p}/AD_{ad}/n_{sample}/Learnt_graphs_fges/{resample}/"  # Base directory containing all subdirectories.
                     temp=base_path.replace('Data','Analysed_FGES')
-                    for pd in range(1,51):
-                        process_directory(base_path, pd, reps,temp,resample)
+                    # if p == 20:
+                    #     num_graphs = 250
+                    # else:
+                    #     num_graphs = 50
+                    #for pd in range(num_graphs):
+                        #process_directory(base_path, pd, reps,temp,resample)
+                        #print(base_path)
+                        #quit()
+                        #process_directory(base_path, pd+1, reps,temp,resample)
+                    process_directory(base_path,reps,temp,resample)
 
 #path =f"analysed/{type}/Variable{}"
+

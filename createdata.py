@@ -43,15 +43,21 @@ for st in st_type:
     for p in variables:
         for ad in avg_deg:
             if p > ad:
-                for i in range(50):
+                if p == 20:
+                    num_graphs = 250
+                else:
+                    num_graphs = 50
+                    
+                for i in range(num_graphs):
                     if st == 'ER':
                         # Generate ER graph
                         g = er_dag(p, ad=ad)
                     elif st == 'SF':
                         # Generate SF graph with both in and out scaling
                         g = er_dag(p, ad=ad)
-                        g = sf_in(g)
-                        g = sf_out(g)
+                        for _ in range(100):
+                            g = sf_in(g)
+                            g = sf_out(g) # Bryan - Keep one of the scale free functions. Ask Erich for clarification
 
                     # Calculate correlation matrix and simulate base matrix with 10240 rows
                     _, B, O = corr(g)

@@ -37,7 +37,7 @@ for gs in gss:
                         with open(path + f'graph{i}.txt') as f: 
                             edges = [edge.split()[1:] for edge in f.read().split("Graph Edges:\n")[1].split("\n") if edge != ""]
                         keys = [tuple(sorted([edge[0], edge[2]], reverse=True)) for edge in edges]
-                        path = base + f'Analysed_FGES/{gs}/Variable_{p}/AD_{ad}/n_{n}/processed_output/{st}/Analysed FGES/' # Change this path to the location of the processed output, Modified for FGES right now!
+                        path = base + f'Analysed_FGES/{gs}/Variable_{p}/AD_{ad}/n_{n}/Learnt_graphs_fges/{st}/Analysed FGES/' # Change this path to the location of the processed output, Modified for FGES right now!
                         with open(path + f'FGES_analyzed_{i}.p', 'rb') as f: # Change this to the name of the processed output file, Modified for FGES right now!
                             probs = pickle.load(f)
 

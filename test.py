@@ -5,6 +5,8 @@ import jpype
 import numpy as np
 import jpype.imports
 import time
+import re
+import pickle
 
 try :
 	jpype.startJVM("-Xmx16g",classpath="tetrad-current.jar")
@@ -79,26 +81,10 @@ def fges(score, discount=[2], starts=1, threads=1):
     score.setPenaltyDiscount(discount)
         
     fges = ts.Fges(score)
-    # fges.setUseBes(False)
     fges.setFaithfulnessAssumed(False)
-    # fges.setResetAfterBM(True)
-    # fges.setResetAfterRS(False)
-
-    # fges.setUseDataOrder(order != None)
-    # fges.setNumStarts(starts)
-    # if starts > 1: starts = 1
-
     fges.setNumThreads(threads)
     fges.setVerbose(False)
-
-    # search = ts.PermutationSearch(fges)
-    # if order != None: search.setOrder(order)
-
     graph = fges.search()
-    # order = search.getOrder()
-    # bics += [bic for bic in boss.getBics()]
-    # times += [time for time in boss.getTimes()]
-
     return graph
 
 def sample_90(filepath):
@@ -123,41 +109,94 @@ def Compute(df, ESS=None):
     graph = fges(score, discount=2, threads=1, starts=1)
     return graph
 
+def analyse_graphs(graphs_90,reps=5):
+    probs = {}
+    for graph in graphs_90:
+        edges = [
+            edge.split()[1:]
+            for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+            if edge.strip()
+        ]
+        # Dictionaries to hold relationships and probabilities
+        parents, children, neighbors, nodes = {}, {}, {}, []
+        for edge in edges:
+            node1, relation, node2 = edge[0], edge[1], edge[2]
+            for node in [node1, node2]:
+                if node not in parents: parents[node] = []
+                if node not in children: children[node] = []
+                if node not in neighbors: neighbors[node] = []
+                if node not in nodes: nodes.append(node)
+
+            if relation == "-->":
+                parents[node2].append(node1)
+                children[node1].append(node2)
+            elif relation == "<--":
+                parents[node1].append(node2)
+                children[node2].append(node1)
+            elif relation == "---":
+                neighbors[node1].append(node2)
+                neighbors[node2].append(node1)
+            
+        # Compute probabilities
+        nodes.sort()
+        for i in range(len(nodes)):
+            for j in range(i):
+                key = (nodes[i], nodes[j])
+                if key[0] not in parents and key[0] not in children and key[0] not in neighbors:
+                    continue
+                if key[1] not in parents[key[0]] and key[1] not in children[key[0]] and key[1] not in neighbors[key[0]]:
+                    continue
+                
+                if key not in probs: probs[key] = {} #"<--": 0, "-->": 0, "---": 0
+
+                if key[1] in parents[key[0]] and "<--" not in probs[key]: probs[key]["<--"] = 0
+                if key[1] in children[key[0]] and "-->" not in probs[key]: probs[key]["-->"] = 0
+                if key[1] in neighbors[key[0]] and "---" not in probs[key]: probs[key]["---"] = 0
+
+                if key[1] in parents[key[0]]: probs[key]["<--"] += 1.0 / reps
+                if key[1] in children[key[0]]: probs[key]["-->"] += 1.0 / reps
+                if key[1] in neighbors[key[0]]: probs[key]["---"] += 1.0 / reps
+    
+    return probs 
+
+
 file_path='Data/SF/Variable_20/AD_2/n_40/Sample_1.csv'
 start=time.time()
 if file_path.endswith(".csv"):
-# root=file_path.split(os.sep)[0]
-#print(root)
+
     base=os.path.dirname(file_path)
-    # print(base)
-    # outputdir=os.path.join(base,"processed_output")
-    # os.makedirs(outputdir,exist_ok=True)
+
     types=['90','50','100SS','100ESS','Split']
     for type in types:
-        #typedir=os.path.join(outputdir,type)
-        #print(typedir)
-        #os.makedirs(typedir,exist_ok=True)
         if type=='90':
-            for i in range(1):
+            graphs_90=[]
+            edges_90=[]
+            
+            for i in range(5):
                 result_90=sample_90(file_path)
                 df_90,_,type=result_90
                 graph=Compute(df_90)
-                print(graph.toString())
-    #             with open(f"{typedir}/{os.path.basename(file_path).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
-    #                             fout.write(str(graph.toString()))
+                f=graph.toString()
+                graphs_90.append(str(f))
+            with open('graphs_90.pkl','wb') as file:
+                pickle.dump(graphs_90,file)
+                print("Graphs saved")
+
+            
+            
+with open('graphs_90.pkl','rb') as file:
+    graphs_90=pickle.load(file)
+    probs=analyse_graphs(graphs_90)
+    print(probs)
+    for graph in graphs_90:
+        edges = [
+            edge.split()[1:]
+            for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+            if edge.strip()
+        ]
+        print("\n",edges)
+
+            
+
             
              
-#print(outputdir)
-
-
-
-end_time = time.time()
-elapsed_time = end_time - start
-
-# if file_path.endswith(".csv"):
-#       print("Success")
-
-#print(f"Elapsed time: {elapsed_time:.6f} seconds")
-#with open(f"{output_dir}/{filename.replace('.csv','')}{type}_subsample.txt", "w") as fout:
-    #fout.write(str(graph.toString()))
-    #fout.write(str(times))
