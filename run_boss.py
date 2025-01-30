@@ -143,6 +143,7 @@ def main(folderpath):
     if folderpath.endswith(".csv"):
         base=os.path.dirname(folderpath)
         outputdir=os.path.join(base,"Learnt_graphs_BOSS")
+        shutil.rmtree(outputdir, ignore_errors=True)
         os.makedirs(outputdir,exist_ok=True)
         types=['90','50','100SS','100ESS','Split']
         for type in types:
@@ -231,7 +232,8 @@ def main(folderpath):
                 
 
     else:
-        output_dir = os.path.join(folderpath, "processed_output")
+        output_dir = os.path.join(folderpath, "Learnt_graphs_BOSS")
+        shutil.rmtree(output_dir, ignore_errors=True)
         os.makedirs(output_dir, exist_ok=True)
         for filename in os.listdir(folderpath):
             if filename.endswith(".csv"):
