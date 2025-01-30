@@ -109,14 +109,15 @@ def Compute(df, ESS=None):
     graph = fges(score, discount=2, threads=1, starts=1)
     return graph
 
-def analyse_graphs(graphs_90,reps=5):
+def analyse_graphs(graphs_90,reps=100):
     probs = {}
     for graph in graphs_90:
         edges = [
             edge.split()[1:]
-            for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+            for edge in graph.split('\n\n')[1].replace('Graph Edges:\n','Graph Edges:').split("Graph Edges:")[1].split("\n")
             if edge.strip()
         ]
+        #
         # Dictionaries to hold relationships and probabilities
         parents, children, neighbors, nodes = {}, {}, {}, []
         for edge in edges:
@@ -149,13 +150,13 @@ def analyse_graphs(graphs_90,reps=5):
                 
                 if key not in probs: probs[key] = {} #"<--": 0, "-->": 0, "---": 0
 
-                if key[1] in parents[key[0]] and "<--" not in probs[key]: probs[key]["<--"] = 0
-                if key[1] in children[key[0]] and "-->" not in probs[key]: probs[key]["-->"] = 0
-                if key[1] in neighbors[key[0]] and "---" not in probs[key]: probs[key]["---"] = 0
+                if key[0] in parents[key[1]] and "-->" not in probs[key]: probs[key]["-->"] = 0
+                if key[0] in children[key[1]] and "<--" not in probs[key]: probs[key]["<--"] = 0
+                if key[0] in neighbors[key[1]] and "---" not in probs[key]: probs[key]["---"] = 0
 
-                if key[1] in parents[key[0]]: probs[key]["<--"] += 1.0 / reps
-                if key[1] in children[key[0]]: probs[key]["-->"] += 1.0 / reps
-                if key[1] in neighbors[key[0]]: probs[key]["---"] += 1.0 / reps
+                if key[0] in parents[key[1]]: probs[key]["-->"] += 1.0 / reps
+                if key[0] in children[key[1]]: probs[key]["<--"] += 1.0 / reps
+                if key[0] in neighbors[key[1]]: probs[key]["---"] += 1.0 / reps
     
     return probs 
 
@@ -184,17 +185,36 @@ if file_path.endswith(".csv"):
 
             
             
-with open('graphs_90.pkl','rb') as file:
+with open('Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/Sample_51_90_all_graphs.pkl','rb') as file:
     graphs_90=pickle.load(file)
+
+    # with open('graphs.txt', 'w') as file:
+    #     for graph in graphs_90:
+    #         file.write(str(graph) + '\n')
+    #print(graphs_90)
     probs=analyse_graphs(graphs_90)
     print(probs)
-    for graph in graphs_90:
-        edges = [
-            edge.split()[1:]
-            for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
-            if edge.strip()
-        ]
-        print("\n",edges)
+    # for graph in graphs_90:
+    #    print(graph.split('\n\n')[1])
+    #print(len(graphs_90))
+    # probs={}
+    # reps=100
+    # for graph in graphs_90:
+    #     edges = [
+    #         edge.split()[1:]
+    #         for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+    #         if edge.strip()
+    #     ]
+    # #    
+    # for graph in graphs_90:
+    #     temp=graph.split('\n\n')[1]
+    #     temp=temp.replace('Graph Edges:\n','Graph Edges:')
+    #     print(temp)
+    #     temp2=temp.split("Graph Edges:")
+    #     print('\n\n')
+    #     print(temp2)
+
+
 
             
 

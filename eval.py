@@ -8,22 +8,24 @@ def process_directory(path, reps,temp,resample):
     files = os.listdir(path)
     #print(files)
     for file in files:
-        print(file)
+        #print(file)
         if file.endswith(".pkl"):
             file_path = os.path.join(path, file)
-            print(f"Processing file: {file}")
+            #print(f"Processing file: {file}")
             probs=analyse_graphs(file_path, reps)
-        print(probs)
-        quit()
+            #print(file.split('_90',)[0])
+
+        # print(probs)
+        
     
-    # print(files)
-    # quit()
-    # for file in files:
-    #     print(file, f"Sample_{pd}_{resample}")
-    #     if file.startswith(f"Sample_{pd}_{resample}") and file.endswith(".pkl"):
-    #         file_path = os.path.join(path, file)
-    #         print(f"Processing file: {file}")
-            #analyse_graphs(file_path, reps,probs)
+            # print(files)
+            # quit()
+            # for file in files:
+            #     print(file, f"Sample_{pd}_{resample}")
+            #     if file.startswith(f"Sample_{pd}_{resample}") and file.endswith(".pkl"):
+            #         file_path = os.path.join(path, file)
+            #         print(f"Processing file: {file}")
+                    #analyse_graphs(file_path, reps,probs)
             
             # break
             # Save the results
@@ -32,13 +34,16 @@ def process_directory(path, reps,temp,resample):
             # with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
             #     pickle.dump(probs, f)
             # print(f"Saved probabilities to {output_file}")
-        #
-
-
-        # output_file = os.path.join(temp,f"Analysed FGES")
-        # os.makedirs(output_file,exist_ok=True)
-        # with open(f'{output_file}/FGES_analyzed_.pkl', "wb") as f:
-        #     pickle.dump(probs, f)
+            # break
+        sample = file.split('Sample_')[1].split('_')[0]
+        # print(sample)
+        # print('\n')
+        # print(probs)
+        # print('\n')
+        output_file = os.path.join(temp)
+        os.makedirs(output_file,exist_ok=True)
+        with open(f'{output_file}/FGES_analyzed_{sample}.pkl', "wb") as f:
+            pickle.dump(probs, f)
     # #print(f"Saved probabilities to {output_file}")
 
 def analyse_graphs(filepath,reps):
@@ -46,11 +51,15 @@ def analyse_graphs(filepath,reps):
     with open(filepath, 'rb') as f:
         graphs = pickle.load(f)
     for graph in graphs:
+        # if (filepath=='Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/Sample_51_90_all_graphs.pkl'):
+        #     print(graph)
         edges = [
             edge.split()[1:]
-            for edge in graph.split('\n\n')[1].split("Graph Edges:\n")[1].split("\n")
+            for edge in graph.split('\n\n')[1].replace('Graph Edges:\n','Graph Edges:').split("Graph Edges:")[1].split("\n")
             if edge.strip()
         ]
+        # if (filepath=='Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/Sample_51_90_all_graphs.pkl'):
+        #     print(edges)
         # Dictionaries to hold relationships and probabilities
         parents, children, neighbors, nodes = {}, {}, {}, []
         for edge in edges:
@@ -171,3 +180,4 @@ for st in st_type:
 
 #path =f"analysed/{type}/Variable{}"
 
+#Analysed_FGES/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/

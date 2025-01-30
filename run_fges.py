@@ -208,6 +208,8 @@ def main(folderpath):
                     #     fout1.write(str(graph1.toString()))
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
                     #     fout2.write(str(graph2.toString()))
+            else:
+                print("Invalid type")
             
                 
 

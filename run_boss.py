@@ -4,6 +4,8 @@ import pandas as pd
 import jpype
 import numpy as np
 import jpype.imports
+import pickle
+import shutil
 
 try :
 	jpype.startJVM("-Xmx16g",classpath="tetrad-current.jar")
@@ -38,7 +40,7 @@ def sample_90(filepath):
     """Sample 90% of the data."""
     try:
             df = pd.read_csv(filepath)
-            samdf = df.sample(frac=0.9, random_state=100)
+            samdf = df.sample(frac=0.9)
             
             return samdf, None, '90'
     except Exception as e:
@@ -49,7 +51,7 @@ def sample_50(filepath):
     """Sample 50% of the data."""
     try:
         df = pd.read_csv(filepath)
-        samdf = df.sample(frac=0.5, random_state=100)
+        samdf = df.sample(frac=0.5)
         return samdf, None, '50'
     except Exception as e:
         print(f"Error processing {filepath} for type '50': {e}")
@@ -59,7 +61,7 @@ def sample_100SS(filepath):
     """Sample 100% of the data with replacement."""
     try:
         df = pd.read_csv(filepath)
-        samdf = df.sample(frac=1, replace=True, random_state=100)
+        samdf = df.sample(frac=1, replace=True)
         return samdf, None, '100SS'
     except Exception as e:
         print(f"Error processing {filepath} for type '100SS': {e}")
@@ -123,7 +125,7 @@ def multi_boss(score, discounts=[2], starts=1, threads=1):
     bics += [bic for bic in boss.getBics()]
     times += [time for time in boss.getTimes()]
 
-    return graph, bics, times
+    return graph
 
 # Transforms dataframe to Tetrad dataframe, computes covariance matrix and then scomputes SEMBIC score and runs boss.
 def Compute(df, ESS=None): 
@@ -134,61 +136,97 @@ def Compute(df, ESS=None):
     if ESS is not None:
         cov.setSampleSize(int(ESS))
     score = ts.score.SemBicScore(cov)
-    graph, bics, times = multi_boss(score, discounts=2, threads=1, starts=1)
+    graph = multi_boss(score, discounts=2, threads=1, starts=1)
     return graph
 
 def main(folderpath):
     if folderpath.endswith(".csv"):
         base=os.path.dirname(folderpath)
-        outputdir=os.path.join(base,"processed_output")
+        outputdir=os.path.join(base,"Learnt_graphs_BOSS")
         os.makedirs(outputdir,exist_ok=True)
         types=['90','50','100SS','100ESS','Split']
         for type in types:
             typedir=os.path.join(outputdir,type)
             os.makedirs(typedir,exist_ok=True)
             if type=='90':
-                        # Generating 100 samples, running boss, storing graphs
+                # Generating 100 samples, running boss, storing graphs
+                graphs_90=[]
                 for i in range(1,101):
                     result_90=sample_90(folderpath)
                     df_90,_,type=result_90
                     graph=Compute(df_90)
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
-                        fout.write(str(graph.toString()))
+                    f=graph.toString()
+                    graphs_90.append(str(f))
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                        pickle.dump(graphs_90,fout)
+                        print("90 done")
+                    # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                    #     fout.write(str(graph.toString()))
             elif type=='50':
+                graphs_50=[]
                 # Generating 100 samples, running boss, storing graphs
                 for i in range(1,101):
                     result_50=sample_50(folderpath)
                     df_50,_,type=result_50
                     graph=Compute(df_50)
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
-                        fout.write(str(graph.toString()))
+                    f=graph.toString()
+                    graphs_50.append(str(f))
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                        pickle.dump(graphs_50,fout)
+                        print("50 done")
+                    # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                    #     fout.write(str(graph.toString()))
             elif type=='100SS':
                 # Generating 100 samples, running boss, storing graphs
+                graphs_100SS=[]
                 for i in range(1,101):
                     result_100=sample_100SS(folderpath)
                     df_100,_,type=result_100
                     graph=Compute(df_100)
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
-                        fout.write(str(graph.toString()))
+                    f=graph.toString()
+                    graphs_100SS.append(str(f))
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                        pickle.dump(graphs_100SS,fout)
+                        print("100SS done")    
+                    # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
+                    #     fout.write(str(graph.toString()))
             elif type=='100ESS':
                 # Generating 100 samples, running boss, storing graphs
+                graphs_100ESS=[]
                 for i in range(1,101):
                     result_100ESS=sample_100ESS(folderpath)
                     df_100ESS,ESS,type=result_100ESS
                     graph=Compute(df_100ESS, ESS)
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
-                            fout.write(str(graph.toString()))
-            else:
-                        # Generating 100 samples, running boss, storing graphs
+                    f=graph.toString()
+                    graphs_100ESS.append(str(f))
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                        pickle.dump(graphs_100ESS,fout)
+                        print("100ESS done")
+                    # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
+                    #         fout.write(str(graph.toString()))
+            elif type=='Split':
+                # Generating 100 samples, running boss, storing graphs
+                
+                graphs_split=[]
                 for i in range (1,101):
                     result_split=sample_split(folderpath)
                     df_split1,df_split2,type=result_split
                     graph1=Compute(df_split1)
                     graph2=Compute(df_split2)
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
-                        fout1.write(str(graph1.toString()))
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
-                        fout2.write(str(graph2.toString()))
+                    f1=graph1.toString()
+                    f2=graph2.toString()
+                    graphs_split.append(str(f1))
+                    graphs_split.append(str(f2))
+                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                        pickle.dump(graphs_split,fout)
+                        print("Split done")
+
+                    # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
+                    #     fout1.write(str(graph1.toString()))
+                    # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
+                    #     fout2.write(str(graph2.toString()))
+            else:
+                print('Error')
             
                 
 
@@ -203,66 +241,99 @@ def main(folderpath):
                     type_dir=os.path.join(output_dir,type)
                     os.makedirs(type_dir,exist_ok=True)
                     if type=='90':
+                        graphs_90=[]
                         # Generating 100 samples, running boss, storing graphs
                         for i in range(1,101):
                             result_90=sample_90(file_path)
                             df_90,_,type=result_90
                             graph=Compute(df_90)
+                            f=graph.toString()
+                            graphs_90.append(str(f))
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                                pickle.dump(graphs_90,fout)
+                                print("90 done")
                             # data = df_to_data(df_90)
                             # score = ts.score.SemBicScore(data, False)
                             # #score.setStructurePrior(0)
                             # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
-                                fout.write(str(graph.toString()))
-                                #fout.write(str(times))
+                            # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                            #     fout.write(str(graph.toString()))
+                            #     #fout.write(str(times))
                     elif type=='50':
                         # Generating 100 samples, running boss, storing graphs
+                        graphs_50=[]
                         for i in range(1,101):
                             result_50=sample_50(file_path)
                             df_50,_,type=result_50
                             graph=Compute(df_50)
+                            f=graph.toString()
+                            graphs_50.append(str(f))
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                                pickle.dump(graphs_50,fout)
+                                print("50 done")
+
                             # data = df_to_data(df_50)
                             # score = ts.score.SemBicScore(data, False)
                             # #score.setStructurePrior(0)
                             # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
-                                fout.write(str(graph.toString()))
-                                #fout.write(str(times)) 
+                            # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
+                            #     fout.write(str(graph.toString()))
+                            #     #fout.write(str(times)) 
                     elif type=='100SS':
                         # Generating 100 samples, running boss, storing graphs
+                        graphs_100SS=[]
                         for i in range(1,101):
                             result_100=sample_100SS(file_path)
                             df_100,_,type=result_100
                             graph=Compute(df_100)
+                            f=graph.toString()
+                            graphs_100SS.append(str(f))
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                                pickle.dump(graphs_100SS,fout)
+                                print("100SS done")
                             # data = df_to_data(df_100)
                             # score = ts.score.SemBicScore(data, False)
                             # #score.setStructurePrior(0)
                             # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
-                                fout.write(str(graph.toString()))
+                            # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
+                            #     fout.write(str(graph.toString()))
                                 #fout.write(str(times))
                     elif type=='100ESS':
                         # Generating 100 samples, running boss, storing graphs
+                        graphs_100ESS=[]
                         for i in range(1,101):
                             result_100ESS=sample_100ESS(file_path)
                             df_100ESS,ESS,type=result_100ESS
                             graph=Compute(df_100ESS, ESS)
+                            f=graph.toString()
+                            graphs_100ESS.append(str(f))
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                                pickle.dump(graphs_100ESS,fout)
+                                print("100ESS done")
                             # data = df_to_data(df_100ESS)
                             # cov = td.CovarianceMatrixOnTheFly(data)
                             # cov.setSampleSize(int(ESS))
                             # score = ts.score.SemBicScore(cov)
                             # #score.setStructurePrior(0)
                             # graph, bics, times = multi_boss(score, discounts=2,threads=1,starts=1)
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
-                                    fout.write(str(graph.toString()))
+                            # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
+                            #         fout.write(str(graph.toString()))
                                     #fout.write(str(times))
                     else:
                         # Generating 100 samples, running boss, storing graphs
+                        graphs_split=[]
                         for i in range (1,101):
                             result_split=sample_split(file_path)
                             df_split1,df_split2,type=result_split
                             graph1=Compute(df_split1)
                             graph2=Compute(df_split2)
+                            f1=graph1.toString()
+                            f2=graph2.toString()
+                            graphs_split.append(str(f1))
+                            graphs_split.append(str(f2))
+                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                                pickle.dump(graphs_split,fout)
+                                print("Split done")
                             # data1 = df_to_data(df_split1)
                             # data2 = df_to_data(df_split2)
                             # score1 = ts.score.SemBicScore(data1, False)
@@ -271,11 +342,11 @@ def main(folderpath):
                             #score2.setStructurePrior(0)
                             # graph1, bics1, times1 = multi_boss(score1, discounts=2,threads=1,starts=1)
                             # graph2, bics2, times2 = multi_boss(score2, discounts=2,threads=1,starts=1)
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
-                                fout1.write(str(graph1.toString()))
-                                #fout1.write(str(times1))
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
-                                fout2.write(str(graph2.toString()))
+                            # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
+                            #     fout1.write(str(graph1.toString()))
+                            #     #fout1.write(str(times1))
+                            # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
+                            #     fout2.write(str(graph2.toString()))
                                 #fout2.write(str(times2))
                 
 #print(f"Processing file: {file_path}\n")
