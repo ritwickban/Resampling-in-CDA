@@ -4,8 +4,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss
 from sklearn.calibration import calibration_curve
-from sklearn.metrics import f1_score 
+from sklearn.metrics import f1_score, precision_score, recall_score
 from sklearn.preprocessing import Binarizer
+import matplotlib.pyplot as plt
 
 base = '/home/erichk/shared/Resampling-in-CDA/'
 
@@ -13,7 +14,7 @@ gss = ['ER', 'SF']
 ps = [20, 100]
 ads = [2, 6]
 ns = [40, 80, 160, 320, 640, 1280, 2560, 5120, 10240]
-sts = ['100ESS', '100SS', '50', '90']
+sts = ['None_PD1','None_PD2'] # Split
 
 # Create a list to store the results
 results = []
@@ -31,26 +32,37 @@ for gs in gss:
                     calib=[]
                     if (p == 100) and (int(n) < 320): 
                         continue
-                    
-                    for i in range(1, 51):
+                    # if (p == 20) and (int(n) == 40):
+                    #     continue
+                    if p==20:
+                        num_graphs=250
+                    else:
+                        num_graphs=50
+                    for i in range(num_graphs):
                         path = base + f'Data/{gs}/Variable_{p}/AD_{ad}/'
-                        with open(path + f'graph{i}.txt') as f: 
-                            edges = [edge.split()[1:] for edge in f.read().split("Graph Edges:\n")[1].split("\n") if edge != ""]
+                        with open(path + f'graph{i+1}.txt') as f: 
+                            edges = [edge.split()[1:] for edge in f.read().split('\n\n')[1].replace('Graph Edges:\n','Graph Edges:').split("Graph Edges:")[1].split("\n") if edge != ""]
                         keys = [tuple(sorted([edge[0], edge[2]], reverse=True)) for edge in edges]
-                        path = base + f'Analysed_FGES/{gs}/Variable_{p}/AD_{ad}/n_{n}/Learnt_graphs_fges/{st}/Analysed FGES/' # Change this path to the location of the processed output, Modified for FGES right now!
-                        with open(path + f'FGES_analyzed_{i}.p', 'rb') as f: # Change this to the name of the processed output file, Modified for FGES right now!
+                        path = base + f'No_resam_FGES/{gs}/Variable_{p}/AD_{ad}/n_{n}/No_resam_FGES/{st}/' # Change this path to the location of the processed output, Modified for FGES right now!
+                        with open(path + f'FGES_analyzed_{i+1}.pkl', 'rb') as f: # Change this to the name of the processed output file, Modified for FGES right now!
                             probs = pickle.load(f)
-
-                    for j in range(p):
-                        for k in range(j):
-                            key = tuple(sorted([f'X{j}', f'X{k}'], reverse=True))
-                            y_true.append(int(key in keys))
-                            y_prob.append(0)
-                            if key in probs: 
-                                y_prob[-1] += round(sum(probs[key].values()), 2)
+                            #print(f"FGES_analyzed_{i+1}.pkl\n")
+                        
+                        for j in range(p):
+                            for k in range(j):
+                                key = tuple(sorted([f'X{j+1}', f'X{k+1}'], reverse=True))
+                                y_true.append(int(key in keys))
+                                y_prob.append(0)
+                                if key in probs: 
+                                    y_prob[-1] += round(sum(probs[key].values()), 2)
 
                         #brier.append(brier_score_loss(y_true, y_prob))
                     # print(len(y_true),len(y_prob))
+                    
+                    #print("y_prob:",y_prob, '\n', 'type:', st)
+                    # if y_prob>1:
+                    #     print(y_prob) 
+                    #     quit()
                     brier=brier_score_loss(y_true, y_prob)
                     # f1=f1_score(y_true, y_prob, average='weighted')
                     # recall =f1_score(y_true, y_prob, average='macro')
@@ -60,9 +72,9 @@ for gs in gss:
                     #quit()
                     threshold = 0.5  # You can adjust this threshold as needed
                     y_pred = Binarizer(threshold=threshold).transform(np.array(y_prob).reshape(-1, 1))
-                    f1=f1_score(y_true, y_pred, average='weighted')
-                    recall =f1_score(y_true, y_pred, average='macro')
-                    precision =f1_score(y_true, y_pred, average='micro')
+                    f1=f1_score(y_true, y_pred)
+                    precision =precision_score(y_true, y_pred)
+                    recall =recall_score(y_true, y_pred)
                     # prob_true,prob_pred=calibration_curve(y_true,y_prob,n_bins=5)
                     # print(prob_true,prob_pred)
                     
@@ -83,9 +95,24 @@ for gs in gss:
                     # Calculate Expected Calibration Error (ECE)
                     ece = np.sum(pi * np.abs(oi - ei))
 
+                    
 
+                    # Compute the calibration curve
+                    # prob_true, prob_pred = calibration_curve(y_true, y_prob, n_bins=10)
 
+                    # # Plot the calibration curve
+                    # plt.figure()
+                    # plt.plot(prob_pred, prob_true, marker='o', linestyle='-', label='Model')
+                    # plt.plot([0,1], [0,1], linestyle='--', color='gray', label='Perfectly calibrated')
+                    # plt.xlabel("Predicted Probability")
+                    # plt.ylabel("True Probability")
+                    # plt.title("Calibration Curve")
+                    # plt.savefig(f'Calibration/calibration_curve_{gs}_{st}_{p}_{ad}_{n}.png')
+                    # plt.legend()
+                    # plt.show()
+            
 
+    
                     #Calculate mean and std deviation of Brier scores
                     # mean_brier = np.mean(brier)
                     # std_brier = np.std(brier)
@@ -95,7 +122,7 @@ for gs in gss:
                     #Append the results to the list
                     results.append({
                         'Graph Type': gs,
-                        'Sampling Technique': st,
+                        'Penalty Discount': st,
                         'Variable Type': p,
                         'Average Degree': ad,
                         'Sample Size': n,
@@ -103,7 +130,7 @@ for gs in gss:
                         'F1': f1,
                         'Recall': recall,
                         'Precision': precision,
-                        "ece": ece
+                        "ECE": ece
                     })
 
                     # Print scores
@@ -113,7 +140,7 @@ for gs in gss:
 df = pd.DataFrame(results)
 
 # Save the DataFrame to a CSV file
-output_csv_path = 'brier_scores_FGES.csv' # Change this to the desired output path, Modified for FGES right now!
+output_csv_path = 'brier_scores_FGES_nores.csv' # Change this to the desired output path, Modified for FGES right now!
 df.to_csv(output_csv_path, index=False)
 
 print(f"Results have been saved to {output_csv_path}")

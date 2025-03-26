@@ -5,8 +5,11 @@ import pickle
 # Command-line arguments: pd is the pattern for filenames, reps is the repetitions count.
 #pd, reps = [int(x) for x in sys.argv[1:3]]
 def process_directory(path, reps,temp,resample):
+    #print(path)
+    #quit()
     files = os.listdir(path)
     #print(files)
+    #quit()
     for file in files:
         #print(file)
         if file.endswith(".pkl"):
@@ -15,7 +18,8 @@ def process_directory(path, reps,temp,resample):
             probs=analyse_graphs(file_path, reps)
             #print(file.split('_90',)[0])
 
-        # print(probs)
+            # print(probs)
+            # quit()
         
     
             # print(files)
@@ -31,7 +35,7 @@ def process_directory(path, reps,temp,resample):
             # Save the results
             # output_file = os.path.join(root, f"Analysed")
             # os.makedirs(output_file,exist_ok=True)
-            # with open(f'{output_file}/Boss_analyzed_{pd}.p', "wb") as f:
+            # with open(f'{output_file}/BOSS_analyzed_{pd}.p', "wb") as f:
             #     pickle.dump(probs, f)
             # print(f"Saved probabilities to {output_file}")
             # break
@@ -51,14 +55,14 @@ def analyse_graphs(filepath,reps):
     with open(filepath, 'rb') as f:
         graphs = pickle.load(f)
     for graph in graphs:
-        # if (filepath=='Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/Sample_51_90_all_graphs.pkl'):
+        # if (filepath=='Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_BOSS/90/Sample_51_90_all_graphs.pkl'):
         #     print(graph)
         edges = [
             edge.split()[1:]
             for edge in graph.split('\n\n')[1].replace('Graph Edges:\n','Graph Edges:').split("Graph Edges:")[1].split("\n")
             if edge.strip()
         ]
-        # if (filepath=='Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/Sample_51_90_all_graphs.pkl'):
+        # if (filepath=='Data/ER/Variable_20/AD_2/n_40/Learnt_graphs_BOSS/90/Sample_51_90_all_graphs.pkl'):
         #     print(edges)
         # Dictionaries to hold relationships and probabilities
         parents, children, neighbors, nodes = {}, {}, {}, []
@@ -150,23 +154,24 @@ def analyse_graphs(filepath,reps):
 #             if key[1] in parents[key[0]]: probs[key]["<--"] += 1.0 / reps
 #             if key[1] in children[key[0]]: probs[key]["-->"] += 1.0 / reps
 #             if key[1] in neighbors[key[0]]: probs[key]["---"] += 1.0 / reps
-reps=100
+reps=1
 variables = [20,100]
 avg_deg = [2,6]
 sample_sizes = [40, 80, 160, 320, 640, 1280, 2560, 5120, 10240]
 #sample_sizes = [40]
 st_type = ['ER', 'SF']
-resamples=['90','50','100SS','100ESS','Split']
+resamples=['None_PD1','None_PD2']
 for st in st_type:
     for p in variables:
         for ad in avg_deg:
             for sample in sample_sizes:
+                #if (p==20) and (int(sample)==40): continue
                 print(st,ad,p,sample)
                 print('\n')
                 for resample in resamples:
                     if (p==100) and (int(sample)<320): continue
-                    base_path = f"Data/{st}/Variable_{p}/AD_{ad}/n_{sample}/Learnt_graphs_fges/{resample}/"  # Base directory containing all subdirectories.
-                    temp=base_path.replace('Data','Analysed_FGES')
+                    base_path = f"Data/{st}/Variable_{p}/AD_{ad}/n_{sample}/No_resam_FGES/{resample}/"  # Base directory containing all subdirectories.
+                    temp=base_path.replace('Data','No_resam_FGES')
                     # if p == 20:
                     #     num_graphs = 250
                     # else:
@@ -180,4 +185,4 @@ for st in st_type:
 
 #path =f"analysed/{type}/Variable{}"
 
-#Analysed_FGES/ER/Variable_20/AD_2/n_40/Learnt_graphs_fges/90/
+#Analysed_BOSS/ER/Variable_20/AD_2/n_40/Learnt_graphs_BOSS/90/

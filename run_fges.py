@@ -8,7 +8,7 @@ import shutil
 import pickle
 
 try :
-	jpype.startJVM("-Xmx16g",classpath="tetrad-current.jar")
+	jpype.startJVM("-Xmx15g",classpath="tetrad-current.jar")
 	print("JVM Started")
 except OSError:
 	print("JVM already running")
@@ -94,12 +94,13 @@ def sample_split(filepath):
         print(f"Error processing {filepath} for type 'Split': {e}")
         return None
 
-def run_fges(score, discounts=[2], starts=1, threads=1):
+def run_fges(score, discount=1, starts=1, threads=1):
     
     score.setStructurePrior(0)
 
 
-    score.setPenaltyDiscount(discounts)
+    score.setPenaltyDiscount(discount)
+    score.setUsePseudoInverse(True)
         
     fges = ts.Fges(score)
     fges.setFaithfulnessAssumed(False)
@@ -119,13 +120,13 @@ def Compute(df, ESS=None):
     if ESS is not None:
         cov.setSampleSize(int(ESS))
     score = ts.score.SemBicScore(cov)
-    graph = run_fges(score, discounts=2, threads=1, starts=1)
+    graph = run_fges(score, discount=1, threads=1, starts=1)
     return graph
 
 def main(folderpath):
     if folderpath.endswith(".csv"):
         base=os.path.dirname(folderpath)
-        outputdir=os.path.join(base,"Learnt_graphs_fges")
+        outputdir=os.path.join(base,"Learnt_graphs_fges_1")
         shutil.rmtree(outputdir,ignore_errors=True)
         os.makedirs(outputdir,exist_ok=True)
         types=['90','50','100SS','100ESS','Split']
@@ -141,9 +142,9 @@ def main(folderpath):
                     graph=Compute(df_90)
                     f=graph.toString()
                     graphs_90.append(str(f))
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                        pickle.dump(graphs_90,fout) 
-                        print("90 done")
+                with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                    pickle.dump(graphs_90,fout) 
+                    print("90 done")
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
                     #     fout.write(str(graph.toString()))
             elif type=='50':
@@ -155,9 +156,9 @@ def main(folderpath):
                     graph=Compute(df_50)
                     f=graph.toString()
                     graphs_50.append(str(f))
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                        pickle.dump(graphs_50,fout)
-                        print("50 done")
+                with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                    pickle.dump(graphs_50,fout)
+                    print("50 done")
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
                     #     fout.write(str(graph.toString()))
             elif type=='100SS':
@@ -169,9 +170,9 @@ def main(folderpath):
                     graph=Compute(df_100)
                     f=graph.toString()
                     graphs_100SS.append(str(f))
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                        pickle.dump(graphs_100SS,fout)
-                        print("100SS done")
+                with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                    pickle.dump(graphs_100SS,fout)
+                    print("100SS done")
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
                     #     fout.write(str(graph.toString()))
             elif type=='100ESS':
@@ -183,16 +184,16 @@ def main(folderpath):
                     graph=Compute(df_100ESS, ESS)
                     f=graph.toString()
                     graphs_100ESS.append(str(f))
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                        pickle.dump(graphs_100ESS,fout)
-                        print("100ESS done")
+                with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                    pickle.dump(graphs_100ESS,fout)
+                    print("100ESS done")
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
                     #         fout.write(str(graph.toString()))
             elif type=='Split':
                         # Generating 100 samples, running boss, storing graphs
                 graphs_split = []
                 #graphs_split2 = []
-                for i in range (1,101):
+                for i in range (1,51):
                     result_split=sample_split(folderpath)
                     df_split1,df_split2,type=result_split
                     graph1=Compute(df_split1)
@@ -201,9 +202,9 @@ def main(folderpath):
                     f2=graph2.toString()
                     graphs_split.append(str(f1))
                     graphs_split.append(str(f2))
-                    with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "w") as fout:
-                        pickle.dump(graphs_split,fout)
-                        print("Split done")
+                with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_all_graphs.pkl", "w") as fout:
+                    pickle.dump(graphs_split,fout)
+                    print("Split done")
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
                     #     fout1.write(str(graph1.toString()))
                     # with open(f"{typedir}/{os.path.basename(folderpath).replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
@@ -214,7 +215,7 @@ def main(folderpath):
                 
 
     else:
-        output_dir = os.path.join(folderpath, "Learnt_graph_fges")
+        output_dir = os.path.join(folderpath, "Learnt_graphs_fges_1")
         shutil.rmtree(output_dir, ignore_errors=True)
         os.makedirs(output_dir, exist_ok=True)
         for filename in os.listdir(folderpath):
@@ -233,9 +234,9 @@ def main(folderpath):
                             graph=Compute(df_90)
                             f=graph.toString()
                             graphs_90.append(str(f))
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                                pickle.dump(graphs_90,fout)
-                                print("90 done")
+                        with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                            pickle.dump(graphs_90,fout)
+                            print("90 done")
                             # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
                             #     fout.write(str(graph.toString()))
 
@@ -248,9 +249,9 @@ def main(folderpath):
                             graph=Compute(df_50)
                             f=graph.toString()
                             graphs_50.append(str(f))
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                                pickle.dump(graphs_50,fout)
-                                print("50 done")
+                        with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                            pickle.dump(graphs_50,fout)
+                            print("50 done")
                             # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_subsample_{i}.txt", "w") as fout:
                             #     fout.write(str(graph.toString()))
                                 #fout.write(str(times)) 
@@ -263,9 +264,9 @@ def main(folderpath):
                             graph=Compute(df_100)
                             f=graph.toString()
                             graphs_100SS.append(str(f))
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                                pickle.dump(graphs_100SS,fout)
-                                print("100SS done")
+                        with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                            pickle.dump(graphs_100SS,fout)
+                            print("100SS done")
                             # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(SS)_{i}.txt", "w") as fout:
                             #     fout.write(str(graph.toString()))
 
@@ -278,16 +279,16 @@ def main(folderpath):
                             graph=Compute(df_100ESS, ESS)
                             f=graph.toString()
                             graphs_100ESS.append(str(f))
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                                pickle.dump(graphs_100ESS,fout)
-                                print("100ESS done")
+                        with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                            pickle.dump(graphs_100ESS,fout)
+                            print("100ESS done")
                             # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_bootstrap(ESS)_{i}.txt", "w") as fout:
                             #         fout.write(str(graph.toString()))
 
-                    else:
+                    elif type=='Split':
                         # Generating 100 samples, running boss, storing graphs
                         graphs_split = []
-                        for i in range (1,101):
+                        for i in range (1,51):
                             result_split=sample_split(file_path)
                             df_split1,df_split2,type=result_split
                             graph1=Compute(df_split1)
@@ -296,21 +297,23 @@ def main(folderpath):
                             f2=graph2.toString()
                             graphs_split.append(str(f1))
                             graphs_split.append(str(f2))
-                            with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
-                                pickle.dump(graphs_split,fout)
-                                print("Split done")
+                        with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_all_graphs.pkl", "wb") as fout:
+                            pickle.dump(graphs_split,fout)
+                            print("Split done")
                             # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(1)_{i}.txt", "w") as fout1:
                             #     fout1.write(str(graph1.toString()))
 
                             # with open(f"{type_dir}/{filename.replace('.csv','')}_{type}_(2)_{i}.txt", "w") as fout2:
                             #     fout2.write(str(graph2.toString()))
+                    else:
+                        print("Invalid type")
 
                 
 
 if __name__ == "__main__":
     # Check if folder path is provided
     if len(sys.argv) < 2:
-        print("Usage: python run_boss.py <folder_path>")
+        print("Usage: python run_fges.py <folder_path>")
         sys.exit(1)
     
     # Get the folder path from command-line arguments

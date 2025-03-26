@@ -1,12 +1,15 @@
 import os
+import sys
+for files in os.listdir('sbatch_NO_re_BOSS/'):
 
-#files = ['sbatch/ER_Variable_100_AD_2_n_10240.sh','sbatch/ER_Variable_100_AD_6_n_10240.sh']
-for files in os.listdir('sbatch_FGES/'):
-        #print(files)
-        if files.startswith("SF_Variable_100_AD_2_n_10240"):
-                #print(files)
+        if files.endswith('.sbatch'):
+                # print(files)
                 exe = []
                 exe.append("module load python3/3.10.9_anaconda2023.03_libmamba")
                 exe.append("module load java/openjdk-17.0.2")
-                exe.append(f"sbatch sbatch_FGES/{files}")
+                exe.append(f"sbatch sbatch_NO_re_BOSS/{files}")
                 os.system(";".join(exe))
+
+
+#find Data -name "Learnt_graph_BOSS" -type d -exec rm -r {} +
+# (files.startswith("BOSS_ER_20_2_40") | files.startswith('BOSS_SF_20_2_40'))
