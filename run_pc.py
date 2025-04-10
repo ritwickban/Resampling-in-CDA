@@ -116,13 +116,13 @@ def Compute(df, ESS=None):
     if ESS is not None:
         cov.setSampleSize(int(ESS))
     #score = ts.score.SemBicScore(cov)
-    graph = run_pc(cov)
+    graph = run_pc(cov, alpha=0.01, pc_depth=100)
     return graph
 
 def main(folderpath):
     if folderpath.endswith(".csv"):
         base=os.path.dirname(folderpath)
-        outputdir=os.path.join(base,"Learnt_graphs_fges")
+        outputdir=os.path.join(base,"Learnt_graphs_PC")
         shutil.rmtree(outputdir,ignore_errors=True)
         os.makedirs(outputdir,exist_ok=True)
         types=['90','50','100SS','100ESS','Split']
@@ -211,7 +211,7 @@ def main(folderpath):
                 
 
     else:
-        output_dir = os.path.join(folderpath, "Learnt_graphs_fges")
+        output_dir = os.path.join(folderpath, "Learnt_graphs_PC")
         shutil.rmtree(output_dir, ignore_errors=True)
         os.makedirs(output_dir, exist_ok=True)
         for filename in os.listdir(folderpath):

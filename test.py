@@ -7,6 +7,7 @@ import jpype.imports
 import time
 import re
 import pickle
+from visualize import graphs_to_probs
 
 try :
 	jpype.startJVM("-Xmx16g",classpath="tetrad-current.jar")
@@ -93,7 +94,7 @@ def fges(score, discount=2, starts=1, threads=1):
 def run_pc(cov, alpha=0.01, pc_depth=-1):
     
     alpha = 0.01
-    pc_depth=-1
+    pc_depth=pc_depth
     test = ts.test.IndTestFisherZ(cov, alpha)
     pc = ts.Pc(test)
     pc.setDepth(pc_depth)    
@@ -137,69 +138,17 @@ def Compute(df, ESS=None):
     cov = td.CovarianceMatrix(data.getVariables(), rcm.compute(True), data.getNumRows())
     if ESS is not None:
         cov.setSampleSize(int(ESS))
-    score = ts.score.SemBicScore(cov)
-    score.setUsePseudoInverse(True)
-    graph = fges(score, discount=1, threads=1, starts=1)
+    # score = ts.score.SemBicScore(cov)
+    # score.setUsePseudoInverse(True)
+    graph = run_pc(cov, alpha=0.01, pc_depth=100)
     
 
-    print(f"\n Edges : {int(graph.getNumEdges())}\n")
+    #print(f"\n Edges : {int(graph.getNumEdges())}\n")
 
     return graph
 
-def analyse_graphs(graphs_90,reps=10):
-    probs = {}
-    for graph in graphs_90:
-        edges = [
-            edge.split()[1:]
-            for edge in graph.split('\n\n')[1].replace('Graph Edges:\n','Graph Edges:').split("Graph Edges:")[1].split("\n")
-            if edge.strip()
-        ]
-        #print(edges)
-        #
-        # Dictionaries to hold relationships and probabilities
-        parents, children, neighbors, nodes = {}, {}, {}, []
-        for edge in edges:
-            node1, relation, node2 = edge[0], edge[1], edge[2]
-            for node in [node1, node2]:
-                if node not in parents: parents[node] = []
-                if node not in children: children[node] = []
-                if node not in neighbors: neighbors[node] = []
-                if node not in nodes: nodes.append(node)
 
-            if relation == "-->":
-                parents[node2].append(node1)
-                children[node1].append(node2)
-            elif relation == "<--":
-                parents[node1].append(node2)
-                children[node2].append(node1)
-            elif relation == "---":
-                neighbors[node1].append(node2)
-                neighbors[node2].append(node1)
-            
-        # Compute probabilities
-        nodes.sort()
-        for i in range(len(nodes)):
-            for j in range(i):
-                key = (nodes[i], nodes[j])
-                if key[0] not in parents and key[0] not in children and key[0] not in neighbors:
-                    continue
-                if key[1] not in parents[key[0]] and key[1] not in children[key[0]] and key[1] not in neighbors[key[0]]:
-                    continue
-                
-                if key not in probs: probs[key] = {} #"<--": 0, "-->": 0, "---": 0
-
-                if key[0] in parents[key[1]] and "-->" not in probs[key]: probs[key]["-->"] = 0
-                if key[0] in children[key[1]] and "<--" not in probs[key]: probs[key]["<--"] = 0
-                if key[0] in neighbors[key[1]] and "---" not in probs[key]: probs[key]["---"] = 0
-
-                if key[0] in parents[key[1]]: probs[key]["-->"] += 1.0 / reps
-                if key[0] in children[key[1]]: probs[key]["<--"] += 1.0 / reps
-                if key[0] in neighbors[key[1]]: probs[key]["---"] += 1.0 / reps
-    
-    return probs 
-
-
-file_path='Data/SF/Variable_100/AD_6/n_320/Sample_20.csv'
+file_path='Data/ER/Variable_100/AD_6/n_10240/Sample_20.csv'
 start=time.time()
 if file_path.endswith(".csv"):
 
@@ -212,18 +161,26 @@ if file_path.endswith(".csv"):
             graphs_90=[]
             edges_90=[]
             
-            for i in range(5):
-                print("100SS")
+            for i in range(100):
+                #print("100SS")
                 result_90=sample_100(file_path)
                 df_90,_,type=result_90
                 graph=Compute(df_90)
-                f=graph.toString()
+                #f=graph.toString()
                 #print(f)
-                graphs_90.append(str(f))
+                graphs_90.append(graph)
                 #graphs_90.append(str(f))
+            
+            probs=graphs_to_probs(graphs_90)
+            print(probs)
+
+
             with open('graphs_90.pkl','wb') as file:
-                pickle.dump(graphs_90,file)
+                pickle.dump(str(graphs_90),file)
                 print("Graphs saved")
+            end =time.time()
+            print("Time taken: ",end-start)
+            quit()
 
         elif type=='100ESS':
                 # Generating 100 samples, running boss, storing graphs
@@ -233,13 +190,17 @@ if file_path.endswith(".csv"):
                     result_100ESS=sample_100ESS(file_path)
                     df_100ESS,ESS,type=result_100ESS
                     graph=Compute(df_100ESS, ESS)
-                    f=graph.toString()
-                    graphs_100ESS.append(str(f))
+                    # f=graph.toString()
+                    graphs_100ESS.append(graph)
+                
+                probs1=graphs_to_probs(graphs_100ESS)
+                print(probs1)
                 with open('graphs_100ESS.pkl','wb') as file:
-                    pickle.dump(graphs_100ESS,file)
+                    pickle.dump(str(graphs_100ESS),file)
                     print("100ESS done")
     end =time.time()
     print("Time taken: ",end-start)
+
 
 
             
